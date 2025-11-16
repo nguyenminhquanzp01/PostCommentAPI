@@ -1,0 +1,1 @@
+public record CreateCommentDto(int? ParentId, string Content);
