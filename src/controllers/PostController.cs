@@ -47,11 +47,8 @@ namespace PostCommentApi.Controllers
       var post = await _db.Posts.FindAsync(id);
       if (post == null) return NotFound();
 
-      // Update fields
       post.Title = dto.Title;
       post.Content = dto.Content;
-
-      // Persist changes
       await _db.SaveChangesAsync();
 
       // According to REST semantics, return 204 No Content on successful PUT
@@ -74,14 +71,12 @@ namespace PostCommentApi.Controllers
       return Ok(comments);
     }
 
-    // Create a comment on a post
     [HttpPost("{id}/comments")]
     public async Task<IActionResult> CreateComment(int id, [FromBody] CreateCommentDto dto)
     {
       var post = await _db.Posts.FindAsync(id);
       if (post == null) return NotFound();
 
-      // If parent is provided, ensure it exists and belongs to the same post
       if (dto.ParentId is not null)
       {
         var parent = await _db.Comments.FindAsync(dto.ParentId.Value);
@@ -121,13 +116,10 @@ namespace PostCommentApi.Controllers
       .OrderBy(c => c.CreatedAt)
       .ToListAsync();
 
-
-      // Build lookup keyed by nullable ParentId so root (null) can be used directly
       var lookup = comments.ToLookup(c => c.ParentId);
 
       List<CommentTreeDto> Build(int? parentId)
       {
-        // lookup[parentId] returns an empty sequence when there are no children
         return lookup[parentId].Select(c => new CommentTreeDto
         {
           Id = c.Id,
