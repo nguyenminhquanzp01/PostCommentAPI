@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 
 namespace PostCommentApi.Controllers
@@ -19,6 +20,7 @@ namespace PostCommentApi.Controllers
       .OrderByDescending(p => p.CreatedAt).Take(50)
       .Select(p => new PostDto { Id = p.Id, Title = p.Title, Content = p.Content, CreatedAt = p.CreatedAt })
       .ToListAsync();
+
     }
 
 
@@ -47,8 +49,11 @@ namespace PostCommentApi.Controllers
       var post = await _db.Posts.FindAsync(id);
       if (post == null) return NotFound();
 
+      // Update fields
       post.Title = dto.Title;
       post.Content = dto.Content;
+
+      // Persist changes
       await _db.SaveChangesAsync();
 
       // According to REST semantics, return 204 No Content on successful PUT
@@ -62,21 +67,26 @@ namespace PostCommentApi.Controllers
       var exists = await _db.Posts.AnyAsync(p => p.Id == id);
       if (!exists) return NotFound();
 
+      var swFlat = Stopwatch.StartNew();
       var comments = await _db.Comments
         .Where(c => c.PostId == id)
         .OrderBy(c => c.CreatedAt)
         .Select(c => new CommentFlatDto { Id = c.Id, ParentId = c.ParentId, Content = c.Content, CreatedAt = c.CreatedAt })
         .ToListAsync();
+      swFlat.Stop();
+      Console.WriteLine($"[GetCommentsFlat] Query took {swFlat.Elapsed.TotalMilliseconds:F2} ms for post {id}");
 
       return Ok(comments);
     }
 
+    // Create a comment on a post
     [HttpPost("{id}/comments")]
     public async Task<IActionResult> CreateComment(int id, [FromBody] CreateCommentDto dto)
     {
       var post = await _db.Posts.FindAsync(id);
       if (post == null) return NotFound();
 
+      // If parent is provided, ensure it exists and belongs to the same post
       if (dto.ParentId is not null)
       {
         var parent = await _db.Comments.FindAsync(dto.ParentId.Value);
@@ -111,27 +121,47 @@ namespace PostCommentApi.Controllers
       if (!exists) return NotFound();
 
 
+      var swTree = Stopwatch.StartNew();
       var comments = await _db.Comments
       .Where(c => c.PostId == id)
       .OrderBy(c => c.CreatedAt)
       .ToListAsync();
 
+
+      // Build lookup keyed by nullable ParentId so root (null) can be used directly
       var lookup = comments.ToLookup(c => c.ParentId);
 
-      List<CommentTreeDto> Build(int? parentId)
+      // Safe recursive builder with cycle detection to avoid infinite recursion
+      List<CommentTreeDto> Build(int? parentId, HashSet<int>? ancestors = null)
       {
-        return lookup[parentId].Select(c => new CommentTreeDto
+        var currentAncestors = ancestors ?? new HashSet<int>();
+
+        // If parentId is in ancestors, we've detected a cycle; abort to prevent infinite recursion
+        if (parentId.HasValue && currentAncestors.Contains(parentId.Value))
+          return new List<CommentTreeDto>();
+
+        return lookup[parentId].Select(c =>
         {
-          Id = c.Id,
-          ParentId = c.ParentId,
-          Content = c.Content,
-          CreatedAt = c.CreatedAt,
-          Replies = Build(c.Id)
-        }).ToList();
+          // Prepare ancestor set for child's recursion: copy and add the current parent id
+          // (ancestors should represent the path up to the parent, not include the child itself).
+          var childAncestors = new HashSet<int>(currentAncestors);
+          if (parentId.HasValue) childAncestors.Add(parentId.Value);
+          var res = new CommentTreeDto
+          {
+            Id = c.Id,
+            ParentId = c.ParentId,
+            Content = c.Content,
+            CreatedAt = c.CreatedAt,
+            Replies = Build(c.Id, childAncestors)
+          };
+          return res;
+        }
+        ).ToList();
+
       }
-
-
       var tree = Build(null);
+      swTree.Stop();
+      Console.WriteLine($"[GetCommentsTree] Query took {swTree.Elapsed.TotalMilliseconds:F2} ms for post {id}");
       return Ok(tree);
     }
   }

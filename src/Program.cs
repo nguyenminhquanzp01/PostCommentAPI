@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 
 
 var builder = WebApplication.CreateBuilder(args);
-
+var port = Environment.GetEnvironmentVariable("PORT") ?? "3000";
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<AppDb>(opt =>
+builder.Services.AddDbContext<DbContext, AppDb>(opt =>
   opt.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
 );
 
@@ -48,4 +48,9 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
+// Start the app. Do not register a terminal middleware that handles every request
+// (app.Run(async ctx => ...)) because that will short-circuit the pipeline and
+// prevent requests from reaching controllers. If you want a simple root health
+// endpoint, use `app.MapGet("/", ...)` instead.
 app.Run();
+ 
