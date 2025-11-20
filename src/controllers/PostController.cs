@@ -106,9 +106,7 @@ namespace PostCommentApi.Controllers
 
       _db.Comments.Add(comment);
       await _db.SaveChangesAsync();
-
       var result = new CommentFlatDto { Id = comment.Id, ParentId = comment.ParentId, Content = comment.Content, CreatedAt = comment.CreatedAt };
-
       return CreatedAtAction(nameof(GetCommentsFlat), new { id = id }, result);
     }
 

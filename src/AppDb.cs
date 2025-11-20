@@ -25,10 +25,10 @@ public class AppDb : DbContext
     u.Property(u => u.Name).HasMaxLength(200);
   }
 );
-    modelBuilder.Entity<User>().ToTable("User");
+    modelBuilder.Entity<User>().ToTable("user");
     modelBuilder.Entity<Post>().Property(p => p.Title).HasMaxLength(500);
-    modelBuilder.Entity<Post>().ToTable("Post");
+    modelBuilder.Entity<Post>().ToTable("post");
     modelBuilder.Entity<Comment>().Property(c => c.Content).HasColumnType("longtext");
-    modelBuilder.Entity<Comment>().ToTable("Comment");
+    modelBuilder.Entity<Comment>().ToTable("comment");
   }
 }

@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-postcomment
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Mypassword!
+      MYSQL_DATABASE: postcommentdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:latest
+    container_name: redis-postcomment
+    restart: always
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    container_name: postcomment-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__Default: "server=mysql;database=social;user=root;password=Mypassword!"
+      Redis__ConnectionString: "redis:6379"
+    depends_on: 
+      - mysql
+      - redis
+
+volumes:
+  mysql_data:

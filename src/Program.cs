@@ -5,13 +5,18 @@ using Microsoft.Extensions.Logging;
 
 
 var builder = WebApplication.CreateBuilder(args);
-var port = Environment.GetEnvironmentVariable("PORT") ?? "3000";
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var ConnectionString = builder.Configuration.GetConnectionString("Default");
+builder.Services.AddDbContext<AppDb>(options =>
+{
+  options.UseMySql(
+      ConnectionString,
+      new MySqlServerVersion(new Version(8, 0, 21)));
+});
 
-builder.Services.AddDbContext<DbContext, AppDb>(opt =>
-  opt.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-);
-
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+  options.Configuration = builder.Configuration["Redis:ConnectionString"];
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -25,6 +30,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
   var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+  // db.Database.Migrate();
   db.Database.EnsureCreated();
   try
   {
@@ -53,4 +59,3 @@ app.MapControllers();
 // prevent requests from reaching controllers. If you want a simple root health
 // endpoint, use `app.MapGet("/", ...)` instead.
 app.Run();
- 
