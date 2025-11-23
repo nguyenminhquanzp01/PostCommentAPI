@@ -53,7 +53,7 @@ namespace PostCommentApi.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comment", (string)null);
+                    b.ToTable("comment", (string)null);
                 });
 
             modelBuilder.Entity("Post", b =>
@@ -83,7 +83,7 @@ namespace PostCommentApi.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Post", (string)null);
+                    b.ToTable("post", (string)null);
                 });
 
             modelBuilder.Entity("User", b =>
@@ -104,9 +104,17 @@ namespace PostCommentApi.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
-                    b.ToTable("User", (string)null);
+                    b.ToTable("user", (string)null);
                 });
 
             modelBuilder.Entity("Comment", b =>

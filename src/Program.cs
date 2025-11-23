@@ -21,7 +21,9 @@ builder.Services.AddStackExchangeRedisCache(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<CommentService>();
 
 var app = builder.Build();
 

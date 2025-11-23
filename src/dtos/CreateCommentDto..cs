@@ -1,1 +1,1 @@
-public record CreateCommentDto(int? ParentId, string Content);
+public record CreateCommentDto(int? ParentId, string Content, int UserId);

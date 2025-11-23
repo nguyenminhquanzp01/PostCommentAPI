@@ -6,8 +6,8 @@ public static class Seeder
       return;
 
     // Seed 10 users total (single batch)
-    const int TOTAL_USERS = 2_000;
-    const int BATCH = 100;
+    const int TOTAL_USERS = 100;
+    const int BATCH = 20;
 
     for (int i = 0; i < TOTAL_USERS; i += BATCH)
     {
@@ -17,8 +17,11 @@ public static class Seeder
 
       for (int j = 0; j < BATCH; j++)
       {
+        var globalIndex = i + j;
         var user = new User
         {
+          UserName = $"user{globalIndex}",
+          Password = "password",
           Name = RandomHelper.RandomString(8),
           Email = RandomHelper.RandomString(6) + "@mail.com"
         };
