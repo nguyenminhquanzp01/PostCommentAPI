@@ -1,14 +1,17 @@
 
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 public class CommentService : ICommentService
 {
   private readonly AppDb _db;
+  private readonly IDistributedCache _cache;
   private readonly IMapper _mapper;
-  public CommentService(AppDb db, IMapper mapper)
+  public CommentService(AppDb db, IDistributedCache cache, IMapper mapper)
   {
     _db = db;
+    _cache = cache;
     _mapper = mapper;
   }
 

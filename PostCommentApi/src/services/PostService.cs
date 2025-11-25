@@ -48,6 +48,16 @@ public class PostService : IPostService
     await _db.SaveChangesAsync();
   }
 
+  public async Task<bool> DoUserHasPost(string username, int postId)
+  {
+    var user = await _db.Users.FirstOrDefaultAsync(u => u.UserName == username);
+    if (user == null) throw new NotFoundException("User", username);
+
+    if (await _db.Posts.AnyAsync(p => p.Id == postId && p.UserId == user.Id)) 
+      return true;
+    throw new Exception("Post not found for the user");
+  }
+
   public async Task<IEnumerable<PostDto>> FilterPosts(PostQueryDto query)
   {
     var q = _db.Posts.AsQueryable();

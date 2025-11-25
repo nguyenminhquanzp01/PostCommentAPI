@@ -17,8 +17,9 @@ public class CommentController : ControllerBase
 
   // Create a comment on a post
   [HttpPost("")]
-  public async Task<IActionResult> CreateComment(int postId, [FromBody] CreateCommentDto dto)
+  public async Task<IActionResult> CreateComment(int postId, int username, [FromBody] CreateCommentDto dto)
   {
+
     var result = await _commentService.CreateCommentForPost(postId, dto);
     return CreatedAtAction(nameof(GetCommentsFlat), new { postId = postId }, result);
   }

@@ -24,6 +24,9 @@ builder.Services.AddScoped<CommentService>();
 
 var app = builder.Build();
 
+// Ensure routing is enabled so middleware can read route values
+app.UseRouting();
+
 // Db Seeding
 // Ensure database created
 using (var scope = app.Services.CreateScope())
@@ -48,6 +51,11 @@ if (app.Environment.IsDevelopment())
   app.UseSwagger();
   app.UseSwaggerUI();
 }
+// Exception handling middleware should be registered early in the pipeline
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// Middleware to validate that the route username owns the postId when present
+app.UseMiddleware<PostOwnershipMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseAuthorization();

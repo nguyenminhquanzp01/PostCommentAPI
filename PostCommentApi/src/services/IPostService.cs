@@ -8,4 +8,5 @@ public interface IPostService
   public Task<IEnumerable<PostDto>> GetNextPostsForUserName(int lastId, string username);
   public Task DeletePost(int id);
   public Task<IEnumerable<PostDto>> FilterPosts(PostQueryDto query);
+  public Task<bool> DoUserHasPost(string username, int postId);
 }

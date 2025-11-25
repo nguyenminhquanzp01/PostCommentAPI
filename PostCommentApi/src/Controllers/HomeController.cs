@@ -1,3 +1,5 @@
+using System.Formats.Asn1;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api")]
@@ -34,6 +36,11 @@ public class HomeController : ControllerBase
   {
     var posts = await _postService.FilterPosts(query);
     return Ok(posts);
+  }
+  [HttpGet("/")]
+  public async Task<IActionResult> GetRoot()
+  {
+    return  Ok("PostCommentApi is running.");
   }
 }
 
