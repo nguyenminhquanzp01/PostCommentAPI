@@ -1,72 +1,70 @@
-
+using System.Text.Json;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using PostCommentApi.Dtos;
+using PostCommentApi.Entities;
+using PostCommentApi.Exceptions;
+using StackExchange.Redis;
 
-public class PostService : IPostService
+namespace PostCommentApi.Services;
+
+public class PostService(AppDb db, IMapper mapper, IDatabase redis) : IPostService
 {
-  private readonly AppDb _db;
-  private readonly IMapper _mapper;
-  public PostService(AppDb db, IMapper mapper)
-  {
-    _db = db;
-    _mapper = mapper;
-  }
   public async Task<PostDto> CreatePost(CreatePostDto dto, int userId)
   {
-    var user = await _db.Users.FindAsync(userId);
+    var user = await db.Users.FindAsync(userId);
     if (user == null) throw new NotFoundException("User", userId);
-    var post = _mapper.Map<Post>(dto);
+    var post = mapper.Map<Post>(dto);
     post.UserId = userId;
-    _db.Posts.Add(post);
-    await _db.SaveChangesAsync();
-    return _mapper.Map<PostDto>(post);
+    db.Posts.Add(post);
+    await db.SaveChangesAsync();
+    return mapper.Map<PostDto>(post);
   }
   public async Task<PostDto> CreatePostForUserName(CreatePostDto dto, string username)
   {
-    var user = await _db.Users.FirstOrDefaultAsync(u => u.UserName == username);
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == username);
     if (user == null) throw new NotFoundException("User", username);
 
-    var post = _mapper.Map<Post>(dto);
+    var post = mapper.Map<Post>(dto);
     post.UserId = user.Id;
     post.CreatedAt = DateTime.UtcNow;
-    _db.Posts.Add(post);
-    await _db.SaveChangesAsync();
-    return _mapper.Map<PostDto>(post);
+    db.Posts.Add(post);
+    await db.SaveChangesAsync();
+    return mapper.Map<PostDto>(post);
   }
 
   public async Task DeletePost(int id)
   {
-    var post = await _db.Posts.FindAsync(id);
+    var post = await db.Posts.FindAsync(id);
     if (post == null) throw new NotFoundException("Post", id);
 
     // Remove comments for the post first to avoid FK issues if cascade isn't configured.
-    var postComments = _db.Comments.Where(c => c.PostId == id);
-    _db.Comments.RemoveRange(postComments);
+    var postComments = db.Comments.Where(c => c.PostId == id);
+    db.Comments.RemoveRange(postComments);
 
-    _db.Posts.Remove(post);
-    await _db.SaveChangesAsync();
+    db.Posts.Remove(post);
+    await db.SaveChangesAsync();
   }
 
   public async Task<bool> DoUserHasPost(string username, int postId)
   {
-    var user = await _db.Users.FirstOrDefaultAsync(u => u.UserName == username);
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == username);
     if (user == null) throw new NotFoundException("User", username);
 
-    if (await _db.Posts.AnyAsync(p => p.Id == postId && p.UserId == user.Id)) 
+    if (await db.Posts.AnyAsync(p => p.Id == postId && p.UserId == user.Id)) 
       return true;
     throw new Exception("Post not found for the user");
   }
 
   public async Task<IEnumerable<PostDto>> FilterPosts(PostQueryDto query)
   {
-    var q = _db.Posts.AsQueryable();
+    var q = db.Posts.AsQueryable();
 
     if (!string.IsNullOrEmpty(query.Keyword))
     {
       q = q.Where(p =>
-          p.Title.Contains(query.Keyword) ||
-          p.Content.Contains(query.Keyword));
+        p.Title.Contains(query.Keyword) ||
+        p.Content.Contains(query.Keyword));
     }
 
     if (query.FromDate.HasValue)
@@ -96,65 +94,85 @@ public class PostService : IPostService
     q = q.Skip(query.Offset).Take(query.Limit);
 
     return await q
-      .Select(p => _mapper.Map<PostDto>(p))
+      .Select(p => mapper.Map<PostDto>(p))
       .ToListAsync();
   }
   public async Task<IEnumerable<PostDto>> GetNextPostsForUserName(int lastId, string username)
   {
-    var user = await _db.Users.FirstOrDefaultAsync(u => u.UserName == username);
+    var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == username);
     if (user == null) throw new NotFoundException("User", username);
 
     const int pageSize = 10;
 
     if (lastId == int.MaxValue)
     {
-      var latest = await _db.Posts
+      var latest = await db.Posts
         .Where(p => p.UserId == user.Id)
         .OrderByDescending(p => p.CreatedAt)
         .ThenByDescending(p => p.Id)
         .Take(pageSize)
-        .Select(p => _mapper.Map<PostDto>(p))
+        .Select(p => mapper.Map<PostDto>(p))
         .ToListAsync();
 
       return latest;
     }
 
-    var last = await _db.Posts.FindAsync(lastId);
+    var last = await db.Posts.FindAsync(lastId);
     if (last == null || last.UserId != user.Id) throw new NotFoundException("Post", lastId);
 
-    var posts = await _db.Posts
+    var posts = await db.Posts
       .Where(p => p.UserId == user.Id && (p.CreatedAt < last.CreatedAt || (p.CreatedAt == last.CreatedAt && p.Id < last.Id)))
       .OrderByDescending(p => p.CreatedAt)
       .ThenByDescending(p => p.Id)
       .Take(pageSize)
-      .Select(p => _mapper.Map<PostDto>(p))
+      .Select(p => mapper.Map<PostDto>(p))
       .ToListAsync();
 
     return posts;
   }
 
-  public async Task<IEnumerable<PostDto>> GetNextPostsFromId(int lastId)
+  /// <summary>
+  /// sắp xếp tất cả post theo thời gian, lấy 10 bài post cũ hơn bài post có id = lastId
+  /// </summary>
+  /// <param name="lastPostId"></param>
+  /// <returns></returns>
+  /// <exception cref="NotFoundException"></exception>
+  public async Task<IEnumerable<PostDto>> GetNextPostsFromPostId(int lastPostId)
   {
     const int pageSize = 10;
-    if (lastId == int.MaxValue)
+    //Nếu lastId = int.MaxValue thì lấy 10 bài post mới nhất 
+    if (lastPostId == int.MaxValue)
     {
-      var latest = await _db.Posts
+      var cacheKey = "post:latest";
+      var cache = await redis.StringGetAsync(cacheKey);
+      if (cache.HasValue)
+      {
+        var cachedPosts = JsonSerializer.Deserialize<List<PostDto>>(cache);
+        if (cachedPosts != null)
+        {
+          return cachedPosts;
+        }
+      }
+      
+      var latest = await db.Posts
         .OrderByDescending(p => p.CreatedAt)
         .ThenByDescending(p => p.Id)
         .Take(pageSize)
-        .Select(p => _mapper.Map<PostDto>(p))
+        .Select(p => mapper.Map<PostDto>(p))
         .ToListAsync();
-
+      var serializedPosts = JsonSerializer.Serialize(latest);
+      await redis.StringSetAsync(cacheKey, serializedPosts, TimeSpan.FromMinutes(5));
       return latest;
     }
-    var last = await _db.Posts.FindAsync(lastId);
-    if (last == null) throw new NotFoundException("Post", lastId);
-    var posts = await _db.Posts
+    //Nếu không thì lấy 10 bài post cũ hơn bài post có id = lastId
+    var last = await db.Posts.FindAsync(lastPostId);
+    if (last == null) throw new NotFoundException("Post", lastPostId);
+    var posts = await db.Posts
       .Where(p => p.CreatedAt < last.CreatedAt || (p.CreatedAt == last.CreatedAt && p.Id < last.Id))
       .OrderByDescending(p => p.CreatedAt)
       .ThenByDescending(p => p.Id)
       .Take(pageSize)
-      .Select(p => _mapper.Map<PostDto>(p))
+      .Select(p => mapper.Map<PostDto>(p))
       .ToListAsync();
 
     return posts;
@@ -162,21 +180,21 @@ public class PostService : IPostService
 
   public async Task<PostDto> GetPostById(int id)
   {
-    var post = await _db.Posts.FindAsync(id);
+    var post = await db.Posts.FindAsync(id);
     if (post == null) throw new NotFoundException("Post", id);
-    return _mapper.Map<PostDto>(post);
+    return mapper.Map<PostDto>(post);
   }
 
   public async Task<PostDto> UpdatePost(int id, CreatePostDto dto)
   {
-    var post = await _db.Posts.FindAsync(id);
+    var post = await db.Posts.FindAsync(id);
     if (post == null) throw new NotFoundException("Post", id);
 
     // Update allowed fields
     post.Title = dto.Title;
     post.Content = dto.Content;
 
-    await _db.SaveChangesAsync();
-    return _mapper.Map<PostDto>(post);
+    await db.SaveChangesAsync();
+    return mapper.Map<PostDto>(post);
   }
 }

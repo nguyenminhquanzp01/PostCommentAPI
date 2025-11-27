@@ -1,65 +1,60 @@
-
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using PostCommentApi.Dtos;
+using PostCommentApi.Entities;
+using PostCommentApi.Exceptions;
+using StackExchange.Redis;
 
-public class CommentService : ICommentService
+namespace PostCommentApi.Services;
+
+public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommentService
 {
-  private readonly AppDb _db;
-  private readonly IDistributedCache _cache;
-  private readonly IMapper _mapper;
-  public CommentService(AppDb db, IDistributedCache cache, IMapper mapper)
-  {
-    _db = db;
-    _cache = cache;
-    _mapper = mapper;
-  }
-
   public async Task<CommentDto> CreateCommentForPost(int postId, CreateCommentDto dto)
   {
-    var post = await _db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
+    var post = await db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
     if (dto.ParentId is not null)
     {
-      var parent = await _db.Comments.FindAsync(dto.ParentId.Value);
+      var parent = await db.Comments.FindAsync(dto.ParentId.Value);
       if (parent == null || parent.PostId != postId) throw new Exception("Unhandled Invalid parent comment");
     }
-    var comment = _mapper.Map<Comment>(dto);
+    var comment = mapper.Map<Comment>(dto);
     comment.PostId = postId;
     comment.CreatedAt = DateTime.UtcNow;
-    _db.Comments.Add(comment);
-    await _db.SaveChangesAsync();
-    return _mapper.Map<CommentDto>(comment);
+    db.Comments.Add(comment);
+    await db.SaveChangesAsync();
+    return mapper.Map<CommentDto>(comment);
   }
 
 
   public async Task DeleteComment(int commentId)
   {
-    var comment = await _db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
-    _db.Comments.Remove(comment);
-    await _db.SaveChangesAsync();
+    var comment = await db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
+    db.Comments.Remove(comment);
+    await db.SaveChangesAsync();
   }
 
   public async Task<IEnumerable<CommentDto>> GetCommentsForPostId(int postId)
   {
-    var post = await _db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
-    var comments = await _db.Comments
-        .Where(c => c.PostId == postId)
-        .OrderBy(c => c.CreatedAt)
-        .Select(c => _mapper.Map<CommentDto>(c))
-        .ToListAsync();
+    var post = await db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
+    var comments = await db.Comments
+      .Where(c => c.PostId == postId)
+      .OrderBy(c => c.CreatedAt)
+      .Select(c => mapper.Map<CommentDto>(c))
+      .ToListAsync();
     return comments;
   }
 
   public async Task<IEnumerable<CommentTreeDto>> GetCommentTreeForPostId(int postId)
   {
-    var exists = await _db.Posts.AnyAsync(p => p.Id == postId);
+    var exists = await db.Posts.AnyAsync(p => p.Id == postId);
     if (!exists) throw new NotFoundException("Post", postId);
 
 
-    var comments = await _db.Comments
-    .Where(c => c.PostId == postId)
-    .OrderBy(c => c.CreatedAt)
-    .ToListAsync();
+    var comments = await db.Comments
+      .Where(c => c.PostId == postId)
+      .OrderBy(c => c.CreatedAt)
+      .ToListAsync();
 
 
     // Build lookup keyed by nullable ParentId so root (null) can be used directly
@@ -75,21 +70,21 @@ public class CommentService : ICommentService
         return new List<CommentTreeDto>();
 
       return lookup[parentId].Select(c =>
-      {
-        // Prepare ancestor set for child's recursion: copy and add the current parent id
-        // (ancestors should represent the path up to the parent, not include the child itself).
-        var childAncestors = new HashSet<int>(currentAncestors);
-        if (parentId.HasValue) childAncestors.Add(parentId.Value);
-        var res = new CommentTreeDto
         {
-          Id = c.Id,
-          ParentId = c.ParentId,
-          Content = c.Content,
-          CreatedAt = c.CreatedAt,
-          Replies = Build(c.Id, childAncestors)
-        };
-        return res;
-      }
+          // Prepare ancestor set for child's recursion: copy and add the current parent id
+          // (ancestors should represent the path up to the parent, not include the child itself).
+          var childAncestors = new HashSet<int>(currentAncestors);
+          if (parentId.HasValue) childAncestors.Add(parentId.Value);
+          var res = new CommentTreeDto
+          {
+            Id = c.Id,
+            ParentId = c.ParentId,
+            Content = c.Content,
+            CreatedAt = c.CreatedAt,
+            Replies = Build(c.Id, childAncestors)
+          };
+          return res;
+        }
       ).ToList();
 
     }
@@ -99,9 +94,9 @@ public class CommentService : ICommentService
 
   public async Task<CommentDto> UpdateComment(int commentId, UpdateCommentDto dto)
   {
-    var comment = await _db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
+    var comment = await db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
     comment.Content = dto.Content;
-    await _db.SaveChangesAsync();
-    return _mapper.Map<CommentDto>(comment);
+    await db.SaveChangesAsync();
+    return mapper.Map<CommentDto>(comment);
   }
 }

@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using PostCommentApi.Entities;
 
-public class AppDb : DbContext
+namespace PostCommentApi;
+
+public class AppDb(DbContextOptions options) : DbContext(options)
 {
-  public AppDb(DbContextOptions options) : base(options) { }
-
-
   public DbSet<User> Users => Set<User>();
   public DbSet<Post> Posts => Set<Post>();
   public DbSet<Comment> Comments => Set<Comment>();
@@ -13,18 +13,18 @@ public class AppDb : DbContext
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     modelBuilder.Entity<Comment>()
-    .HasOne(c => c.Parent)
-    .WithMany(c => c.Replies)
-    .HasForeignKey(c => c.ParentId)
-    .OnDelete(DeleteBehavior.Cascade);
+      .HasOne(c => c.Parent)
+      .WithMany(c => c.Replies)
+      .HasForeignKey(c => c.ParentId)
+      .OnDelete(DeleteBehavior.Cascade);
 
     modelBuilder.Entity<User>(
-  u =>
-  {
-    u.Property(u => u.Email).HasMaxLength(200);
-    u.Property(u => u.Name).HasMaxLength(200);
-  }
-);
+      u =>
+      {
+        u.Property(u => u.Email).HasMaxLength(200);
+        u.Property(u => u.Name).HasMaxLength(200);
+      }
+    );
     modelBuilder.Entity<User>().ToTable("user");
     modelBuilder.Entity<Post>().Property(p => p.Title).HasMaxLength(500);
     modelBuilder.Entity<Post>().ToTable("post");

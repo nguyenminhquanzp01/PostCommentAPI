@@ -1,6 +1,10 @@
+using PostCommentApi.Dtos;
+
+namespace PostCommentApi.Services;
+
 public interface IPostService
 {
-  public Task<IEnumerable<PostDto>> GetNextPostsFromId(int lastId);
+  public Task<IEnumerable<PostDto>> GetNextPostsFromPostId(int lastPostId);
   public Task<PostDto> GetPostById(int id);
   public Task<PostDto> CreatePost(CreatePostDto dto, int userId);
   public Task<PostDto> UpdatePost(int id, CreatePostDto dto);

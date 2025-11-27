@@ -1,4 +1,9 @@
 using AutoMapper;
+using PostCommentApi.Dtos;
+using PostCommentApi.Entities;
+
+namespace PostCommentApi.AutoMapper;
+
 public class CommentProfile : Profile
 {
   public CommentProfile()

@@ -27,11 +27,19 @@ services:
     ports:
       - "8080:8080"
     environment:
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
       ConnectionStrings__Default: "server=mysql;database=social;user=root;password=Mypassword!"
       Redis__ConnectionString: "redis:6379"
-    depends_on: 
+    depends_on:
       - mysql
       - redis
+
+  wrk:
+    image: williamyeh/wrk
+    container_name: wrk-benchmark
+    depends_on:
+      - api
+    entrypoint: [ "tail", "-f", "/dev/null" ]  # chạy nền để bạn exec vào
 
 volumes:
   mysql_data:

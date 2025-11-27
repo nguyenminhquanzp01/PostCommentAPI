@@ -1,46 +1,39 @@
-using System.Formats.Asn1;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using PostCommentApi.Dtos;
+using PostCommentApi.Services;
+
+namespace PostCommentApi.Controllers;
+
 [ApiController]
 [Route("api")]
-public class HomeController : ControllerBase
+public class HomeController(IPostService postService) : ControllerBase
 {
-  private readonly AppDb _db;
-  private readonly IPostService _postService;
-  public HomeController(AppDb db, IPostService postService)
-  {
-    _db = db;
-    _postService = postService;
-  }
-
-
   [HttpGet("feed/{lastId}")]
   public async Task<IActionResult> Feed(int lastId)
   {
     if (lastId == int.MaxValue)
     {
-      var latest = await _postService.GetNextPostsFromId(int.MaxValue);
+      var latest = await postService.GetNextPostsFromPostId(int.MaxValue);
       return Ok(latest);
     }
 
-    var last = await _postService.GetPostById(lastId);
+    var last = await postService.GetPostById(lastId);
     // If the given lastId doesn't exist, return an empty list (client can handle as end-of-feed)
     if (last == null) return Ok(new List<PostDto>());
 
-    var posts = await _postService.GetNextPostsFromId(lastId);
+    var posts = await postService.GetNextPostsFromPostId(lastId);
 
     return Ok(posts);
   }
   [HttpGet("filter/posts")]
   public async Task<IActionResult> Filter([FromQuery] PostQueryDto query)
   {
-    var posts = await _postService.FilterPosts(query);
+    var posts = await postService.FilterPosts(query);
     return Ok(posts);
   }
   [HttpGet("/")]
-  public async Task<IActionResult> GetRoot()
+  public IActionResult GetRoot()
   {
     return  Ok("PostCommentApi is running.");
   }
 }
-

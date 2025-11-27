@@ -1,5 +1,3 @@
-public class NotFoundException : Exception
-{
-  public NotFoundException(string name, object key)
-      : base($"{name} with id '{key}' was not found.") { }
-}
+namespace PostCommentApi.Exceptions;
+
+public class NotFoundException(string name, object key) : Exception($"{name} with id '{key}' was not found.");

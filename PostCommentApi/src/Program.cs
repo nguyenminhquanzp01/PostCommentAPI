@@ -1,19 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PostCommentApi;
+using PostCommentApi.Middlewares;
+using PostCommentApi.Services;
+using PostCommentApi.Utilities;
+using StackExchange.Redis;
 
 
 var builder = WebApplication.CreateBuilder(args);
-var ConnectionString = builder.Configuration.GetConnectionString("Default");
+var connectionString = builder.Configuration.GetConnectionString("Default");
 builder.Services.AddDbContext<AppDb>(options =>
 {
   options.UseMySql(
-      ConnectionString,
+      connectionString,
       new MySqlServerVersion(new Version(8, 0, 21)));
 });
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-  options.Configuration = builder.Configuration["Redis:ConnectionString"];
-});
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+  ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis:ConnectionString"))
+);
+
+builder.Services.AddScoped<IDatabase>(sp =>
+  sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase()
+);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -21,6 +29,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<CommentService>();
+
+
 
 var app = builder.Build();
 

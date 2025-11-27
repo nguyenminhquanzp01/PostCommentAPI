@@ -1,3 +1,7 @@
+using PostCommentApi.Dtos;
+
+namespace PostCommentApi.Services;
+
 public interface ICommentService
 {
   public Task<IEnumerable<CommentDto>> GetCommentsForPostId(int postId);

@@ -1,3 +1,7 @@
+using PostCommentApi.Entities;
+
+namespace PostCommentApi.Utilities;
+
 public static class Seeder
 {
   public static async Task SeedUserPostComment(AppDb context)
@@ -6,16 +10,16 @@ public static class Seeder
       return;
 
     // Seed 10 users total (single batch)
-    const int TOTAL_USERS = 100;
-    const int BATCH = 20;
+    const int totalUsers = 100;
+    const int batch = 20;
 
-    for (int i = 0; i < TOTAL_USERS; i += BATCH)
+    for (int i = 0; i < totalUsers; i += batch)
     {
       var users = new List<User>();
       var posts = new List<Post>();
       var comments = new List<Comment>();
 
-      for (int j = 0; j < BATCH; j++)
+      for (int j = 0; j < batch; j++)
       {
         var globalIndex = i + j;
         var user = new User
@@ -102,7 +106,7 @@ public static class Seeder
 
       await context.SaveChangesAsync();
 
-      Console.WriteLine($"Seeded {i + BATCH} users...");
+      Console.WriteLine($"Seeded {i + batch} users...");
     }
   }
 

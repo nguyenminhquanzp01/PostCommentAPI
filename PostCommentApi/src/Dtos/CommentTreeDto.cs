@@ -1,3 +1,5 @@
+namespace PostCommentApi.Dtos;
+
 public class CommentTreeDto
 {
   public int Id { get; set; }

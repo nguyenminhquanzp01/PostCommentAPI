@@ -1,3 +1,5 @@
+namespace PostCommentApi.Dtos;
+
 public class PostQueryDto
 {
     public string? Keyword { get; set; }

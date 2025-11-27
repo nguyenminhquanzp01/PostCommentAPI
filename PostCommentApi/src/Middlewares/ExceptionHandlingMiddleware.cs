@@ -1,25 +1,19 @@
 using System.Text.Json;
+using PostCommentApi.Exceptions;
 
-public class ExceptionHandlingMiddleware
+namespace PostCommentApi.Middlewares;
+
+public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
-  private readonly RequestDelegate _next;
-  private readonly ILogger<ExceptionHandlingMiddleware> _logger;
-
-  public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
-  {
-    _next = next;
-    _logger = logger;
-  }
-
   public async Task Invoke(HttpContext context)
   {
     try
     {
-      await _next(context);
+      await next(context);
     }
     catch (NotFoundException nf)
     {
-      _logger.LogWarning(nf, "Not found: {Message}", nf.Message);
+      logger.LogWarning(nf, "Not found: {Message}", nf.Message);
       context.Response.StatusCode = StatusCodes.Status404NotFound;
       context.Response.ContentType = "application/json";
       var payload = JsonSerializer.Serialize(new { error = nf.Message });
@@ -27,7 +21,7 @@ public class ExceptionHandlingMiddleware
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Unhandled exception");
+      logger.LogError(ex, "Unhandled exception");
       context.Response.StatusCode = StatusCodes.Status500InternalServerError;
       context.Response.ContentType = "application/json";
       var payload = JsonSerializer.Serialize(new { error = "An unexpected error occurred." });
@@ -35,4 +29,3 @@ public class ExceptionHandlingMiddleware
     }
   }
 }
-
