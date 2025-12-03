@@ -1,0 +1,16 @@
+﻿version: "3.8"
+services:
+  postcommentapi:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: postcommentapi-dev
+    working_dir: /src
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    volumes:
+      - ./PostCommentApi:/src:cached
+      - ~/.nuget/packages:/root/.nuget/packages:ro
+    command: >
+      bash -c "dotnet restore && dotnet watch --project PostCommentApi.csproj run --urls=http://+:8080 --no-launch-profile"
