@@ -10,7 +10,7 @@ namespace PostCommentApi.Services;
 
 public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommentService
 {
-  public async Task<CommentDto> CreateCommentForPost(int postId, CreateCommentDto dto)
+  public async Task<CommentDto> CreateCommentForPost(int postId, CreateCommentDto dto, int currentUserId, bool isAdmin)
   {
     var post = await db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
     if (dto.ParentId is not null)
@@ -18,18 +18,28 @@ public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommen
       var parent = await db.Comments.FindAsync(dto.ParentId.Value);
       if (parent == null || parent.PostId != postId) throw new Exception("Unhandled Invalid parent comment");
     }
+
     var comment = mapper.Map<Comment>(dto);
     comment.PostId = postId;
     comment.CreatedAt = DateTime.UtcNow;
+
+    // Author is always taken from the caller's token (currentUserId). Do not accept author in the DTO.
+    comment.UserId = currentUserId;
+
     db.Comments.Add(comment);
     await db.SaveChangesAsync();
     return mapper.Map<CommentDto>(comment);
   }
 
 
-  public async Task DeleteComment(int commentId)
+  public async Task DeleteComment(int commentId, int currentUserId, bool isAdmin)
   {
     var comment = await db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
+
+    // Only admin or owner can delete
+    if (!isAdmin && comment.UserId != currentUserId)
+      throw new NotFoundException("Comment", commentId); // hide existence for unauthorized
+
     db.Comments.Remove(comment);
     await db.SaveChangesAsync();
   }
@@ -92,9 +102,14 @@ public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommen
     return tree;
   }
 
-  public async Task<CommentDto> UpdateComment(int commentId, UpdateCommentDto dto)
+  public async Task<CommentDto> UpdateComment(int commentId, UpdateCommentDto dto, int currentUserId, bool isAdmin)
   {
     var comment = await db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);
+
+    // Only admin or owner can update
+    if (!isAdmin && comment.UserId != currentUserId)
+      throw new NotFoundException("Comment", commentId);
+
     comment.Content = dto.Content;
     await db.SaveChangesAsync();
     return mapper.Map<CommentDto>(comment);

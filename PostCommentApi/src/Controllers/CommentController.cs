@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using PostCommentApi.Dtos;
 using PostCommentApi.Services;
 
 namespace PostCommentApi.Controllers;
 
 [ApiController]
-[Route("api/{username}/posts/{postId}/comments")]
-public class CommentController(CommentService commentService) : ControllerBase
+[Route("api/posts/{postId}/comments")]
+public class CommentController(ICommentService commentService) : ControllerBase
 {
   // Flat comments for a post
   [HttpGet("flat")]
@@ -18,13 +19,18 @@ public class CommentController(CommentService commentService) : ControllerBase
 
   // Create a comment on a post
   [HttpPost("")]
-  public async Task<IActionResult> CreateComment(int postId, int username, [FromBody] CreateCommentDto dto)
+  [Authorize]
+  public async Task<IActionResult> CreateComment(int postId, [FromBody] CreateCommentDto dto)
   {
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
 
-    var result = await commentService.CreateCommentForPost(postId, dto);
+    var result = await commentService.CreateCommentForPost(postId, dto, callerId, isAdmin);
     return CreatedAtAction(nameof(GetCommentsFlat), new { postId }, result);
   }
-  
+
   [HttpGet("tree")]
   public async Task<IActionResult> GetCommentsTree(int postId)
   {
@@ -32,15 +38,27 @@ public class CommentController(CommentService commentService) : ControllerBase
     return Ok(tree);
   }
   [HttpDelete("{commentId}")]
+  [Authorize]
   public async Task<IActionResult> DeleteComment(int commentId)
   {
-    await commentService.DeleteComment(commentId);
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+
+    await commentService.DeleteComment(commentId, callerId, isAdmin);
     return NoContent();
   }
   [HttpPut("{commentId}")]
+  [Authorize]
   public async Task<IActionResult> UpdateComment(int commentId, [FromBody] UpdateCommentDto dto)
   {
-    var updatedComment = await commentService.UpdateComment(commentId, dto);
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+
+    var updatedComment = await commentService.UpdateComment(commentId, dto, callerId, isAdmin);
     return Ok(updatedComment);
   }
 }

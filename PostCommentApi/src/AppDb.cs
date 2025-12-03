@@ -8,8 +8,8 @@ public class AppDb(DbContextOptions options) : DbContext(options)
   public DbSet<User> Users => Set<User>();
   public DbSet<Post> Posts => Set<Post>();
   public DbSet<Comment> Comments => Set<Comment>();
-
-
+  // public DbSet<UserRole> UserRoles => Set<UserRole>();
+  // public DbSet<Role> Roles => Set<Role>();
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     modelBuilder.Entity<Comment>()
@@ -30,5 +30,7 @@ public class AppDb(DbContextOptions options) : DbContext(options)
     modelBuilder.Entity<Post>().ToTable("post");
     modelBuilder.Entity<Comment>().Property(c => c.Content).HasColumnType("longtext");
     modelBuilder.Entity<Comment>().ToTable("comment");
+    // modelBuilder.Entity<UserRole>().ToTable("user_role");
+    // modelBuilder.Entity<Role>().ToTable("role");
   }
 }

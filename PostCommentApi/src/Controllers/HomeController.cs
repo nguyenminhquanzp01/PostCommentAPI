@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PostCommentApi.Dtos;
 using PostCommentApi.Services;
@@ -6,7 +7,7 @@ namespace PostCommentApi.Controllers;
 
 [ApiController]
 [Route("api")]
-public class HomeController(IPostService postService) : ControllerBase
+public class HomeController(IPostService postService, ILogger<HomeController> logger) : ControllerBase
 {
   [HttpGet("feed/{lastId}")]
   public async Task<IActionResult> Feed(int lastId)
@@ -31,9 +32,11 @@ public class HomeController(IPostService postService) : ControllerBase
     var posts = await postService.FilterPosts(query);
     return Ok(posts);
   }
+  [Authorize]
   [HttpGet("/")]
   public IActionResult GetRoot()
   {
+    logger.LogInformation("API is running.");
     return  Ok("PostCommentApi is running.");
   }
 }

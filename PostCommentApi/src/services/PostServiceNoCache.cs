@@ -8,11 +8,11 @@ using StackExchange.Redis;
 
 namespace PostCommentApi.Services;
 
-public class PostService(
+public class PostServiceNoCache(
     AppDb db,
     IMapper mapper,
     IDatabase redis,
-    ILogger<PostService> logger
+    ILogger<PostServiceNoCache> logger
 
   ) : IPostService
 {
@@ -132,17 +132,17 @@ public class PostService(
     //Nếu lastId = int.MaxValue thì lấy 10 bài post mới nhất 
     if (lastPostId == int.MaxValue)
     {
-      var cacheKey = "post:latest";
-      var cache = await redis.StringGetAsync(cacheKey);
-      if (cache.HasValue)
-      {
-        var cachedPosts = JsonSerializer.Deserialize<List<PostDto>>(cache);
-        if (cachedPosts != null)
-        {
-          logger.LogInformation("Cache hit for latest posts .");
-          return cachedPosts;
-        }
-      }
+      // var cacheKey = "post:latest";
+      // var cache = await redis.StringGetAsync(cacheKey);
+      // if (cache.HasValue)
+      // {
+      //   var cachedPosts = JsonSerializer.Deserialize<List<PostDto>>(cache);
+      //   if (cachedPosts != null)
+      //   {
+      //     logger.LogInformation("Cache hit for latest posts .");
+      //     return cachedPosts;
+      //   }
+      // }
 
       var latest = await db.Posts
         .OrderByDescending(p => p.CreatedAt)
@@ -151,7 +151,7 @@ public class PostService(
         .Select(p => mapper.Map<PostDto>(p))
         .ToListAsync();
       var serializedPosts = JsonSerializer.Serialize(latest);
-      await redis.StringSetAsync(cacheKey, serializedPosts, TimeSpan.FromMinutes(5));
+      // await redis.StringSetAsync(cacheKey, serializedPosts, TimeSpan.FromMinutes(5));
       return latest;
     }
     //Nếu không thì lấy 10 bài post cũ hơn bài post có id = lastId
@@ -170,21 +170,21 @@ public class PostService(
 
   public async Task<PostDto> GetPostById(int id)
   {
-    var cacheKey = $"post:{id}";
-    var cache = await redis.StringGetAsync(cacheKey);
-    if (cache.HasValue)
-    {
-      if (JsonSerializer.Deserialize<PostDto>(cache!) != null)
-         return JsonSerializer.Deserialize<PostDto>(cache!)!;
-    }
+    // var cacheKey = $"post:{id}";
+    // var cache = await redis.StringGetAsync(cacheKey);
+    // if (cache.HasValue)
+    // {
+    //   if (JsonSerializer.Deserialize<PostDto>(cache!) != null)
+    //      return JsonSerializer.Deserialize<PostDto>(cache!)!;
+    // }
 
     var post = await db.Posts.FindAsync(id);
     if (post == null) throw new NotFoundException("Post", id);
 
     var dto = mapper.Map<PostDto>(post);
-    await redis.StringSetAsync(cacheKey,
-        JsonSerializer.Serialize(dto),
-        TimeSpan.FromMinutes(10));
+    // await redis.StringSetAsync(cacheKey,
+    //     JsonSerializer.Serialize(dto),
+    //     TimeSpan.FromMinutes(10));
 
     return dto;
 

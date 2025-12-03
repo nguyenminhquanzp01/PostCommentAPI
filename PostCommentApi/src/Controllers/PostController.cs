@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PostCommentApi.Dtos;
 using PostCommentApi.Services;
@@ -5,10 +6,11 @@ using PostCommentApi.Services;
 namespace PostCommentApi.Controllers;
 
 [ApiController]
-[Route("api/{username}/posts")]
+[Route("api/posts")]
 public class PostsController(IPostService postService) : ControllerBase
 {
   [HttpGet]
+  [AllowAnonymous]
   public async Task<IActionResult> GetLatestPosts()
   {
     var latest = await postService.GetNextPostsFromPostId(int.MaxValue);
@@ -16,6 +18,7 @@ public class PostsController(IPostService postService) : ControllerBase
   }
 
   [HttpGet("next/{lastPostId}")]
+  [AllowAnonymous]
   public async Task<IActionResult> GetNextPosts(int lastPostId)
   {
     var posts = await postService.GetNextPostsFromPostId(lastPostId);
@@ -23,6 +26,7 @@ public class PostsController(IPostService postService) : ControllerBase
   }
 
   [HttpGet("{id}")]
+  [AllowAnonymous]
   public async Task<IActionResult> GetById(int id)
   {
     var post = await postService.GetPostById(id);
@@ -30,23 +34,44 @@ public class PostsController(IPostService postService) : ControllerBase
   }
 
   [HttpPost]
-  public async Task<IActionResult> Create([FromBody] CreatePostDto dto, string username)
+  [Authorize]
+  public async Task<IActionResult> Create([FromBody] CreatePostDto dto)
   {
-    var post = await postService.CreatePostForUserName(dto, username);
-    return CreatedAtAction(nameof(GetById), new { id = post.Id, username = username }, post);
+    // Determine caller
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    var callerUserName = User.FindFirst("unique_name")?.Value;
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+
+    if (!int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+
+    var postForUser = await postService.CreatePost(dto, callerId);
+    return CreatedAtAction(nameof(GetById), new { id = postForUser.Id, username = callerUserName }, postForUser);
   }
+
   [HttpPut("{id}")]
+  [Authorize]
   public async Task<IActionResult> Update(int id, [FromBody] CreatePostDto dto)
   {
-    // Find the post
-    await postService.UpdatePost(id, dto);
-    // According to REST semantics, return 204 No Content on successful PUT
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+
+    await postService.UpdatePost(id, dto, callerId, isAdmin);
     return NoContent();
   }
+
   [HttpDelete("{id}")]
+  [Authorize]
   public async Task<IActionResult> Delete(int id)
   {
-    await postService.DeletePost(id);
+    var userIdClaim = User.FindFirst("sub")?.Value;
+    if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
+      return Forbid();
+    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+
+    await postService.DeletePost(id, callerId, isAdmin);
     return NoContent();
   }
 }

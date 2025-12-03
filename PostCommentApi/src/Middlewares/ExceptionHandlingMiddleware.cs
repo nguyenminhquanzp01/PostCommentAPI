@@ -11,6 +11,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     {
       await next(context);
     }
+    catch (UnauthorizedAccessException ua)
+    {
+      logger.LogWarning(ua, "Unauthorized: {Message}", ua.Message);
+      context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+      context.Response.ContentType = "application/json";
+      var payload = JsonSerializer.Serialize(new { error = ua.Message });
+      await context.Response.WriteAsync(payload);
+    }
     catch (NotFoundException nf)
     {
       logger.LogWarning(nf, "Not found: {Message}", nf.Message);

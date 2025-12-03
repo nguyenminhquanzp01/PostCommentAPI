@@ -8,8 +8,9 @@ public class CommentProfile : Profile
 {
   public CommentProfile()
   {
-    CreateMap<Comment, CreateCommentDto>().ForMember(dest => dest.AuthorId, opt => opt.MapFrom(src => src.UserId));
-    CreateMap<CreateCommentDto, Comment>().ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.AuthorId));
+    // CreateCommentDto no longer contains AuthorId. We'll map fields except UserId which is set in the service.
+    CreateMap<Comment, CreateCommentDto>();
+    CreateMap<CreateCommentDto, Comment>().ForMember(dest => dest.UserId, opt => opt.Ignore());
     CreateMap<Comment, CommentDto>();
     CreateMap<Comment, CommentTreeDto>();
   }

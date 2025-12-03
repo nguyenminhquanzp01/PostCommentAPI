@@ -1,16 +1,19 @@
-﻿version: "3.8"
-services:
-  postcommentapi:
-    image: mcr.microsoft.com/dotnet/sdk:8.0
-    container_name: postcommentapi-dev
-    working_dir: /src
-    ports:
-      - "8080:8080"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
-    volumes:
-      - ./PostCommentApi:/src:cached
-      - ~/.nuget/packages:/root/.nuget/packages:ro
-    command: >
-      bash -c "dotnet restore && dotnet watch --project PostCommentApi.csproj run --urls=http://+:8080 --no-launch-profile"
+﻿# =======================
+#   Development Image
+# =======================
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dev
+WORKDIR /src
+
+# Copy csproj trước để restore cache
+COPY *.csproj .
+RUN dotnet restore
+
+# Copy toàn bộ source
+COPY . .
+
+# Sử dụng ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+# Swagger sẽ tự bật ở môi trường Development (nếu bạn cấu hình đúng)
+# dotnet watch để reload code real time
+CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8080"]
