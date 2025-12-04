@@ -43,7 +43,10 @@ builder.Services.AddDbContext<AppDb>(options =>
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
   var redisConfig = isRunningInContainer ? config["REDIS:CONNECTIONSTRINGDOCKER"] : config["REDIS:CONNECTIONSTRING"];
-  return ConnectionMultiplexer.Connect(redisConfig);
+  if (string.IsNullOrEmpty(redisConfig)) throw new InvalidOperationException("Redis connection string is not configured.");
+  var options = ConfigurationOptions.Parse(redisConfig);
+  options.AbortOnConnectFail = false;
+  return ConnectionMultiplexer.Connect(options);
 });
 builder.Services.AddScoped<IDatabase>(sp =>
   sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase()
