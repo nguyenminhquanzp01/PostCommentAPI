@@ -58,6 +58,7 @@ builder.Services.AddAutoMapper(typeof(Program).Assembly);
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IPostService, PostServiceNoCache>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddHttpContextAccessor();
 
 // Correlation Id services removed
@@ -96,10 +97,10 @@ app.UseSerilogRequestLogging();
 using (var scope = app.Services.CreateScope())
 {
   var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-  // db.Database.Migrate();
-  db.Database.EnsureCreated();
+
   try
   {
+    db.Database.Migrate();
     await Seeder.SeedUserPostComment(db);
   }
   catch (Exception ex)

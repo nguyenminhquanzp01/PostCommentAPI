@@ -4,7 +4,7 @@ namespace PostCommentApi.Services;
 
 public interface IPostService
 {
-  public Task<IEnumerable<PostDto>> GetNextPostsFromPostId(int lastPostId);
+  public Task<IEnumerable<PostDto>> GetOlderPostsFromPostId(int lastPostId);
   public Task<PostDto> GetPostById(int id);
   public Task<PostDto> CreatePost(CreatePostDto dto, int userId);
   // currentUserId: id of the caller (from token)

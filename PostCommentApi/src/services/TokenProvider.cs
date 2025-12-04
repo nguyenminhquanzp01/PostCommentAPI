@@ -17,7 +17,7 @@ public sealed class TokenProvider(IConfiguration configuration)
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim("sub", user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
                 new Claim("isAdmin", user.IsAdmin.ToString())

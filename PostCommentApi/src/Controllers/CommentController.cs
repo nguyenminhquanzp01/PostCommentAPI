@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using PostCommentApi.Dtos;
 using PostCommentApi.Services;
+using System.Security.Claims;
 
 namespace PostCommentApi.Controllers;
 
@@ -22,10 +23,10 @@ public class CommentController(ICommentService commentService) : ControllerBase
   [Authorize]
   public async Task<IActionResult> CreateComment(int postId, [FromBody] CreateCommentDto dto)
   {
-    var userIdClaim = User.FindFirst("sub")?.Value;
+    var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
     if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
       return Forbid();
-    var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
+    var isAdmin = bool.TryParse(User.Claims.FirstOrDefault(c => c.Type == "isAdmin")?.Value, out var adminFlag) && adminFlag;
 
     var result = await commentService.CreateCommentForPost(postId, dto, callerId, isAdmin);
     return CreatedAtAction(nameof(GetCommentsFlat), new { postId }, result);
@@ -41,7 +42,7 @@ public class CommentController(ICommentService commentService) : ControllerBase
   [Authorize]
   public async Task<IActionResult> DeleteComment(int commentId)
   {
-    var userIdClaim = User.FindFirst("sub")?.Value;
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
       return Forbid();
     var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;
@@ -53,7 +54,7 @@ public class CommentController(ICommentService commentService) : ControllerBase
   [Authorize]
   public async Task<IActionResult> UpdateComment(int commentId, [FromBody] UpdateCommentDto dto)
   {
-    var userIdClaim = User.FindFirst("sub")?.Value;
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (userIdClaim == null || !int.TryParse(userIdClaim, out var callerId))
       return Forbid();
     var isAdmin = bool.TryParse(User.FindFirst("isAdmin")?.Value, out var adminFlag) && adminFlag;

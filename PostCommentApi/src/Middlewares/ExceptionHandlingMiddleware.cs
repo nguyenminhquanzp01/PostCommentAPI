@@ -11,6 +11,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     {
       await next(context);
     }
+    catch (ExistsException ex)
+    {
+      logger.LogWarning(ex, "Conflict: {Message}", ex.Message);
+      context.Response.StatusCode = StatusCodes.Status409Conflict;
+      context.Response.ContentType = "application/json";
+      var payload = JsonSerializer.Serialize(new { error = ex.Message });
+      await context.Response.WriteAsync(payload);
+    }
     catch (UnauthorizedAccessException ua)
     {
       logger.LogWarning(ua, "Unauthorized: {Message}", ua.Message);

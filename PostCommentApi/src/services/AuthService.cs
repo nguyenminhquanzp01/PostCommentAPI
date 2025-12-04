@@ -20,9 +20,9 @@ public class AuthService(AppDb db, TokenProvider tokenProvider)
   public async Task<string> Register(RegisterDto dto)
   {
     // Ensure username uniqueness
-    var isUserNameExist  = await db.Users.AnyAsync(u => u.UserName == dto.UserName);
+    var isUserNameExist = await db.Users.AnyAsync(u => u.UserName == dto.UserName);
     var isEmailExist = await db.Users.AnyAsync(u => u.Email == dto.Email);
-    if (isUserNameExist || isEmailExist) throw new Exception("Username or email already exists");
+    if (isUserNameExist || isEmailExist) throw new ExistsException("user or email", "");
 
     var user = new Entities.User
     {

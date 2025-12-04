@@ -1,3 +1,4 @@
+using Amazon.S3.Model;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
@@ -12,14 +13,27 @@ public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommen
 {
   public async Task<CommentDto> CreateCommentForPost(int postId, CreateCommentDto dto, int currentUserId, bool isAdmin)
   {
+    int getCommentLevel(int? id)
+    {
+      int level = 0;
+      var comment = db.Comments.Find(id);
+      while (comment?.ParentId != null)
+      {
+        level++;
+        comment = db.Comments.Find(comment.ParentId);
+      }
+      return level;
+    }
     var post = await db.Posts.FindAsync(postId) ?? throw new NotFoundException("Post", postId);
     if (dto.ParentId is not null)
     {
       var parent = await db.Comments.FindAsync(dto.ParentId.Value);
-      if (parent == null || parent.PostId != postId) throw new Exception("Unhandled Invalid parent comment");
+      if (parent == null || parent.PostId != postId) throw new NotFoundException("Parent Comment", dto.ParentId.Value);
     }
-
     var comment = mapper.Map<Comment>(dto);
+    var level = getCommentLevel(dto.ParentId);
+    if (level >= 2)
+      comment.ParentId = db.Comments.Find(dto.ParentId.Value).ParentId;
     comment.PostId = postId;
     comment.CreatedAt = DateTime.UtcNow;
 
@@ -97,11 +111,35 @@ public class CommentService(AppDb db, IMapper mapper, IDatabase redis) : ICommen
         }
       ).ToList();
 
+
     }
-    var tree = Build(null);
+    List<CommentTreeDto> Build2(int? parentId, HashSet<int>? ancestors = null)
+    {
+      var d = new Dictionary<int, CommentTreeDto>();
+      d.Add(0, new CommentTreeDto { Id = 0 });
+      foreach (var c in comments)
+      {
+        var node = new CommentTreeDto
+        {
+          Id = c.Id,
+          ParentId = c.ParentId,
+          Content = c.Content,
+          CreatedAt = c.CreatedAt,
+          Replies = new List<CommentTreeDto>()
+        };
+        d[c.Id] = node;
+      }
+      foreach (var i in d)
+      {
+        if (i.Key != 0)
+          d[i.Value.ParentId ?? 0].Replies.Add(i.Value);
+      }
+      var res = d.Where(kv => kv.Value.ParentId == null).Select(kv => kv.Value).ToList();
+      return res;
+    }
+    var tree = Build2(null);
     return tree;
   }
-
   public async Task<CommentDto> UpdateComment(int commentId, UpdateCommentDto dto, int currentUserId, bool isAdmin)
   {
     var comment = await db.Comments.FindAsync(commentId) ?? throw new NotFoundException("Comment", commentId);

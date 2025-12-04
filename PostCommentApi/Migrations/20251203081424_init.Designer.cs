@@ -5,13 +5,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using PostCommentApi;
 
 #nullable disable
 
 namespace PostCommentApi.Migrations
 {
     [DbContext(typeof(AppDb))]
-    [Migration("20251123155859_init")]
+    [Migration("20251203081424_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -24,7 +25,7 @@ namespace PostCommentApi.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
-            modelBuilder.Entity("Comment", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Comment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -59,7 +60,7 @@ namespace PostCommentApi.Migrations
                     b.ToTable("comment", (string)null);
                 });
 
-            modelBuilder.Entity("Post", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Post", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -89,7 +90,7 @@ namespace PostCommentApi.Migrations
                     b.ToTable("post", (string)null);
                 });
 
-            modelBuilder.Entity("User", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -101,6 +102,9 @@ namespace PostCommentApi.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
+
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -120,20 +124,20 @@ namespace PostCommentApi.Migrations
                     b.ToTable("user", (string)null);
                 });
 
-            modelBuilder.Entity("Comment", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Comment", b =>
                 {
-                    b.HasOne("Comment", "Parent")
+                    b.HasOne("PostCommentApi.Entities.Comment", "Parent")
                         .WithMany("Replies")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Post", "Post")
+                    b.HasOne("PostCommentApi.Entities.Post", "Post")
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("User", "User")
+                    b.HasOne("PostCommentApi.Entities.User", "User")
                         .WithMany("Comments")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -146,9 +150,9 @@ namespace PostCommentApi.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Post", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Post", b =>
                 {
-                    b.HasOne("User", "User")
+                    b.HasOne("PostCommentApi.Entities.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -157,17 +161,17 @@ namespace PostCommentApi.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Comment", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Comment", b =>
                 {
                     b.Navigation("Replies");
                 });
 
-            modelBuilder.Entity("Post", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.Post", b =>
                 {
                     b.Navigation("Comments");
                 });
 
-            modelBuilder.Entity("User", b =>
+            modelBuilder.Entity("PostCommentApi.Entities.User", b =>
                 {
                     b.Navigation("Comments");
 

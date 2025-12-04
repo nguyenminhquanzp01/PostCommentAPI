@@ -16,4 +16,4 @@ ENV ASPNETCORE_ENVIRONMENT=Development
 
 # Swagger sẽ tự bật ở môi trường Development (nếu bạn cấu hình đúng)
 # dotnet watch để reload code real time
-CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8080"]
+CMD ["dotnet", "run", "--urls", "http://0.0.0.0:8080"]

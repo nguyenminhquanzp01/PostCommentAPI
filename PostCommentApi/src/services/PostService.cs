@@ -126,7 +126,7 @@ public class PostService(
   /// <param name="lastPostId"></param>
   /// <returns></returns>
   /// <exception cref="NotFoundException"></exception>
-  public async Task<IEnumerable<PostDto>> GetNextPostsFromPostId(int lastPostId)
+  public async Task<IEnumerable<PostDto>> GetOlderPostsFromPostId(int lastPostId)
   {
     const int pageSize = 10;
     //Nếu lastId = int.MaxValue thì lấy 10 bài post mới nhất 
@@ -175,7 +175,7 @@ public class PostService(
     if (cache.HasValue)
     {
       if (JsonSerializer.Deserialize<PostDto>(cache!) != null)
-         return JsonSerializer.Deserialize<PostDto>(cache!)!;
+        return JsonSerializer.Deserialize<PostDto>(cache!)!;
     }
 
     var post = await db.Posts.FindAsync(id);
