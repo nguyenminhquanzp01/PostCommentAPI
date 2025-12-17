@@ -3,10 +3,11 @@ using PostCommentApi.Entities;
 using PostCommentApi.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using AutoMapper;
 
 namespace PostCommentApi.Services;
 
-public class PageService(AppDb db) : IPageService
+public class PageService(AppDb db, IPostService postService, IMapper mapper) : IPageService
 {
   public async Task<IEnumerable<PageDto>> GetPages()
   {
@@ -122,24 +123,7 @@ public class PageService(AppDb db) : IPageService
       .FirstOrDefaultAsync(pu => pu.PageId == pageId && pu.UserId == userId);
     if (userRole == null || (userRole.Role != PageRole.Owner && userRole.Role != PageRole.Admin && userRole.Role != PageRole.Editor))
       throw new UnauthorizedAccessException("You do not have permission to post in this page.");
-
-    var post = new Post
-    {
-      Title = dto.Title,
-      Content = dto.Content,
-      UserId = userId,
-      PageId = pageId
-    };
-    db.Posts.Add(post);
-    await db.SaveChangesAsync();
-
-    return new PostDto
-    {
-      Id = post.Id,
-      Title = post.Title,
-      Content = post.Content,
-      CreatedAt = post.CreatedAt
-    };
+    return await postService.CreatePost(dto, userId);
   }
 
   public async Task ChangeUserRole(int pageId, int targetUserId, PageRole newRole, int currentUserId, bool isAdmin)
@@ -176,12 +160,6 @@ public class PageService(AppDb db) : IPageService
       .OrderByDescending(p => p.CreatedAt)
       .ToListAsync();
 
-    return posts.Select(p => new PostDto
-    {
-      Id = p.Id,
-      Title = p.Title,
-      Content = p.Content,
-      CreatedAt = p.CreatedAt
-    });
+    return mapper.Map<List<PostDto>>(posts);
   }
 }

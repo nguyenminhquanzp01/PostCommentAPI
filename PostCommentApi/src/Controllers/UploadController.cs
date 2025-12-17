@@ -12,6 +12,11 @@ public class UploadController : ControllerBase
     }
 
     [HttpPost("avatar")]
+    /// <summary>
+    /// Upload an avatar image to the configured MinIO bucket and return the file key and public url.
+    /// </summary>
+    /// <param name="file">Multipart file uploaded by the client.</param>
+    /// <returns>200 OK with fileKey and url on success; 400 BadRequest when file is missing.</returns>
     public async Task<IActionResult> UploadAvatar(IFormFile file)
     {
         if (file == null || file.Length == 0)

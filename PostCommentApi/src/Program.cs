@@ -62,6 +62,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IPostService, PostServiceNoCache>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPageService, PageService>();
+builder.Services.AddScoped<TestService>();
 builder.Services.AddHttpContextAccessor();
 
 // Correlation Id services removed
@@ -125,7 +126,7 @@ if (app.Environment.IsDevelopment())
 }
 // Exception handling middleware should be registered early in the pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
+app.UseMiddleware<TestMiddleWare>();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

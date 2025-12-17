@@ -14,7 +14,7 @@ public class HomeController(IPostService postService, ILogger<HomeController> lo
   {
     if (lastId == int.MaxValue)
     {
-      var latest = await postService.GetOlderPostsFromPostId(int.MaxValue);
+      var latest = await postService.GetPreviousPostsFromPostId(int.MaxValue);
       return Ok(latest);
     }
 
@@ -22,7 +22,7 @@ public class HomeController(IPostService postService, ILogger<HomeController> lo
     // If the given lastId doesn't exist, return an empty list (client can handle as end-of-feed)
     if (last == null) return Ok(new List<PostDto>());
 
-    var posts = await postService.GetOlderPostsFromPostId(lastId);
+    var posts = await postService.GetPreviousPostsFromPostId(lastId);
 
     return Ok(posts);
   }

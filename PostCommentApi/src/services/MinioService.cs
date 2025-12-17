@@ -47,6 +47,11 @@ public class MinioService
     return key;
   }
 
+  /// <summary>
+  /// Ensure the configured default bucket exists in the S3/MinIO service and create it if missing.
+  /// This method is safe to call repeatedly and will swallow exceptions after logging to console.
+  /// </summary>
+  /// <returns>Task representing the async operation.</returns>
   public async Task EnsureBucketExistsAsync()
   {
     try
@@ -66,6 +71,11 @@ public class MinioService
     }
   }
 
+  /// <summary>
+  /// Build a public URL for an object stored under the configured bucket.
+  /// </summary>
+  /// <param name="key">Object key returned by <see cref="UploadAsync"/>.</param>
+  /// <returns>Publicly addressable URL for the object (depends on MinIO service URL).</returns>
   public string GetFileUrl(string key)
   {
     return $"{_s3Client.Config.ServiceURL}/{_bucketName}/{key}";

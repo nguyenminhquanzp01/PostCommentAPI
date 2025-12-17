@@ -12,22 +12,37 @@ public class PostsController(IPostService postService) : ControllerBase
 {
   [HttpGet]
   [AllowAnonymous]
+  /// <summary>
+  /// Return the latest posts (page size = 10).
+  /// </summary>
+  /// <returns>List of PostDto ordered by CreatedAt descending.</returns>
+  [ProducesResponseType(StatusCodes.Status200OK)]
   public async Task<IActionResult> GetLatestPosts()
   {
-    var latest = await postService.GetOlderPostsFromPostId(int.MaxValue);
+    var latest = await postService.GetPreviousPostsFromPostId(int.MaxValue);
     return Ok(latest);
   }
 
   [HttpGet("next/{lastPostId}")]
   [AllowAnonymous]
+  /// <summary>
+  /// Return older posts before the specified post id marker.
+  /// </summary>
+  /// <param name="lastPostId">Id of the last post currently shown; use this to paginate older posts.</param>
+  /// <returns>List of PostDto (up to page size).</returns>
   public async Task<IActionResult> GetOlderPosts(int lastPostId)
   {
-    var posts = await postService.GetOlderPostsFromPostId(lastPostId);
+    var posts = await postService.GetPreviousPostsFromPostId(lastPostId);
     return Ok(posts);
   }
 
   [HttpGet("{id}")]
   [AllowAnonymous]
+  /// <summary>
+  /// Get a post by id.
+  /// </summary>
+  /// <param name="id">Post id.</param>
+  /// <returns>PostDto.</returns>
   public async Task<IActionResult> GetById(int id)
   {
     var post = await postService.GetPostById(id);
@@ -36,6 +51,11 @@ public class PostsController(IPostService postService) : ControllerBase
 
   [HttpPost]
   [Authorize]
+  /// <summary>
+  /// Create a new post authored by the caller.
+  /// </summary>
+  /// <param name="dto">CreatePostDto payload.</param>
+  /// <returns>Created PostDto with 201 status.</returns>
   public async Task<IActionResult> Create([FromBody] CreatePostDto dto)
   {
     // Determine caller
@@ -52,6 +72,12 @@ public class PostsController(IPostService postService) : ControllerBase
 
   [HttpPut("{id}")]
   [Authorize]
+  /// <summary>
+  /// Update a post. Only the owner or an admin can update.
+  /// </summary>
+  /// <param name="id">Post id to update.</param>
+  /// <param name="dto">CreatePostDto containing updated fields.</param>
+  /// <returns>204 NoContent on success.</returns>
   public async Task<IActionResult> Update(int id, [FromBody] CreatePostDto dto)
   {
     var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -65,6 +91,11 @@ public class PostsController(IPostService postService) : ControllerBase
 
   [HttpDelete("{id}")]
   [Authorize]
+  /// <summary>
+  /// Delete a post. Only the owner or an admin may delete.
+  /// </summary>
+  /// <param name="id">Post id to delete.</param>
+  /// <returns>204 NoContent on success.</returns>
   public async Task<IActionResult> Delete(int id)
   {
     var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

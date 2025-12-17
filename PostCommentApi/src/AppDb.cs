@@ -13,6 +13,7 @@ public class AppDb(DbContextOptions options) : DbContext(options)
   public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
   public DbSet<Page> Pages => Set<Page>();
   public DbSet<PageUser> PageUsers => Set<PageUser>();
+  public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     modelBuilder.Entity<Comment>()
@@ -21,7 +22,7 @@ public class AppDb(DbContextOptions options) : DbContext(options)
       .HasForeignKey(c => c.ParentId)
       .OnDelete(DeleteBehavior.Cascade);
     modelBuilder.Entity<User>().HasMany(e => e.FriendShipAsUser).WithOne(f => f.User).HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
-    modelBuilder.Entity<User>().HasMany(e => e.FriendShipAsFriend).WithOne(f => f.Friend).HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Cascade); 
+    modelBuilder.Entity<User>().HasMany(e => e.FriendShipAsFriend).WithOne(f => f.Friend).HasForeignKey(f => f.FriendId).OnDelete(DeleteBehavior.Cascade);
     modelBuilder.Entity<User>(
       u =>
       {
@@ -33,6 +34,14 @@ public class AppDb(DbContextOptions options) : DbContext(options)
       .HasKey(gm => new { gm.GroupId, gm.UserId });
     modelBuilder.Entity<PageUser>()
       .HasKey(pu => new { pu.PageId, pu.UserId });
+    modelBuilder.Entity<RefreshToken>(
+      rt =>
+      {
+        rt.Property(r => r.Token).HasMaxLength(500);
+        rt.HasOne(r => r.User).WithMany(u => u.RefreshTokens).HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        rt.ToTable("refresh_token");
+      }
+    );
     modelBuilder.Entity<User>().ToTable("user");
     modelBuilder.Entity<Post>().Property(p => p.Title).HasMaxLength(500);
     modelBuilder.Entity<Post>().ToTable("post");

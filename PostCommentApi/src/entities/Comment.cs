@@ -12,4 +12,5 @@ public class Comment
   public int? ParentId { get; set; }
   public Comment? Parent { get; set; }
   public List<Comment> Replies { get; set; } = new();
+  
 }

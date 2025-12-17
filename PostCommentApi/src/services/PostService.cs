@@ -24,6 +24,7 @@ public class PostService(
     post.UserId = userId;
     db.Posts.Add(post);
     await db.SaveChangesAsync();
+    await redis.KeyDeleteAsync("post:latest");
     return mapper.Map<PostDto>(post);
   }
 
@@ -39,7 +40,8 @@ public class PostService(
     // Remove comments for the post first to avoid FK issues if cascade isn't configured.
     var postComments = db.Comments.Where(c => c.PostId == id);
     db.Comments.RemoveRange(postComments);
-
+    await redis.KeyDeleteAsync($"post:{id}");
+    await redis.KeyDeleteAsync("post:latest");
     db.Posts.Remove(post);
     await db.SaveChangesAsync();
   }
@@ -86,7 +88,7 @@ public class PostService(
       .Select(p => mapper.Map<PostDto>(p))
       .ToListAsync();
   }
-  public async Task<IEnumerable<PostDto>> GetNextPostsForUser(int lastId, int userId)
+  public async Task<IEnumerable<PostDto>> GetPriviousPostsFromPostIdForUser(int lastId, int userId)
   {
     var user = await db.Users.FindAsync(userId);
     if (user == null) throw new NotFoundException("User", userId);
@@ -126,7 +128,7 @@ public class PostService(
   /// <param name="lastPostId"></param>
   /// <returns></returns>
   /// <exception cref="NotFoundException"></exception>
-  public async Task<IEnumerable<PostDto>> GetOlderPostsFromPostId(int lastPostId)
+  public async Task<IEnumerable<PostDto>> GetPreviousPostsFromPostId(int lastPostId)
   {
     const int pageSize = 10;
     //Nếu lastId = int.MaxValue thì lấy 10 bài post mới nhất 
@@ -203,6 +205,8 @@ public class PostService(
     post.Content = dto.Content;
 
     await db.SaveChangesAsync();
+    await redis.KeyDeleteAsync($"post:{id}");
+    await redis.KeyDeleteAsync("post:latest");
     return mapper.Map<PostDto>(post);
   }
 }
